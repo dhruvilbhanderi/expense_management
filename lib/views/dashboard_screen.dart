@@ -39,13 +39,13 @@ class DashboardScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: Text('Dashboard',style: TextStyle(color: Colors.white),),
         backgroundColor: primaryColor,
         elevation: 0,
         actions: [
           IconButton(
             tooltip: 'Statistics',
-            icon:  Icon(Icons.bar_chart),
+            icon:  Icon(Icons.bar_chart,color: Colors.white,),
             onPressed: () => Get.to(() =>  StatisticsScreen()),
           ),
           // IconButton(
@@ -82,8 +82,8 @@ class DashboardScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.to(() =>  AddTransactionScreen()),
         backgroundColor: primaryColor,
-        icon: const Icon(Icons.add),
-        label: const Text('Add'),
+        icon:  Icon(Icons.add,color: Colors.white,),
+        label:  Text('Add',style: TextStyle(color: Colors.white),),
       ),
     );
   }
@@ -115,7 +115,7 @@ class DashboardScreen extends StatelessWidget {
               // controller.balance is computed from totalIncome - totalExpense
               final bal = controller.balance;
               return Text(
-                '\$${bal.toStringAsFixed(2)}',
+                '\₹${bal.toStringAsFixed(2)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 36,
@@ -316,7 +316,7 @@ class BalanceCard extends StatelessWidget {
     final controller = Get.find<ExpenseController>();
     return Obx(() {
       final amount = isIncome ? controller.totalIncome : controller.totalExpense;
-      final amountText = '\$${amount.toStringAsFixed(2)}';
+      final amountText = '\₹${amount.toStringAsFixed(2)}';
 
       return Container(
         padding: const EdgeInsets.all(14),
@@ -397,40 +397,148 @@ class _TransactionTile extends StatelessWidget {
 
     final color = categoryColorMap[transaction.category] ?? Colors.grey;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onLongPress: () => showDeleteDialog(context: context, controller: controller, tx: transaction),
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color),
           ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          transaction.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          '${transaction.category} • ${DateFormat('MMM dd, yyyy').format(transaction.date)}',
-          style: const TextStyle(fontSize: 12),
-        ),
-        trailing: Text(
-          '${transaction.type == 'expense' ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            color: transaction.type == 'expense' ? Colors.red : Colors.green,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+          title: Text(
+            transaction.title ?? 'Untitled',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
+          subtitle: Text(
+            '${transaction.category} • ${DateFormat('MMM dd, yyyy').format(transaction.date)}',
+            style: const TextStyle(fontSize: 12),
+          ),
+          trailing: Text(
+            '${transaction.type == 'expense' ? '-' : '+'}\₹${transaction.amount.toStringAsFixed(2)}',
+            style: TextStyle(
+              color: transaction.type == 'expense' ? Colors.red : Colors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          onTap: () => Get.to(() => AddTransactionScreen(transaction: transaction)),
         ),
-        onTap: () => Get.to(() => AddTransactionScreen(transaction: transaction)),
       ),
     );
   }
+  /// Call this to confirm deletion for [tx]. Will call controller.deleteTransaction(id)
+  Future<void> showDeleteDialog({
+    required BuildContext context,
+    required ExpenseController controller,
+    required TransactionModel tx,
+  }) async
+  {
+    // Nice gradient dialog background via Dialog + Container
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 8,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon circle
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Colors.red.shade400, Colors.red.shade700],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: const Icon(Icons.delete_forever, color: Colors.white, size: 32),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Delete this transaction?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  tx.title ?? 'Untitled',
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      // perform delete and offer undo
+      controller.deleteTransaction(tx.id);
+
+      // show undo snack
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Deleted "${tx.title ?? 'Transaction'}"'),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'UNDO',
+            textColor: Colors.yellowAccent,
+            onPressed: () {
+              // re-insert transaction at top
+              controller.transactions.insert(0, tx);
+              controller.saveTransactions();
+              Get.snackbar('Restored', 'Transaction restored', snackPosition: SnackPosition.BOTTOM);
+            },
+          ),
+        ),
+      );
+    }
+  }
 }
+

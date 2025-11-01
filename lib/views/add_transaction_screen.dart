@@ -73,8 +73,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       appBar: AppBar(
         title: Text(widget.transaction == null
             ? 'Add Transaction'
-            : 'Edit Transaction'),
-        backgroundColor: const Color(0xFF6C63FF),
+            : 'Edit Transaction',style: TextStyle(color: Colors.white),),
+        backgroundColor: Color(0xFF6C63FF),
+        centerTitle: true,
+        leading: IconButton(onPressed: (){
+          Get.back();
+        }, icon: Icon(Icons.arrow_back_ios,color: Colors.white,)),
         actions: widget.transaction != null
             ? [
           IconButton(
@@ -97,7 +101,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         Get.back();
                         Get.back();
                       },
-                      child: const Text('Delete',
+                      child:  Text('Delete',
                           style: TextStyle(color: Colors.red)),
                     ),
                   ],
@@ -207,7 +211,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                prefixIcon: const Icon(Icons.attach_money),
+                prefixIcon: Icon(Icons.money),
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
@@ -340,9 +344,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   widget.transaction == null
                       ? 'Add Transaction'
                       : 'Update Transaction',
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white
                   ),
                 ),
               ),

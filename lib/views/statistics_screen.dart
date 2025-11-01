@@ -17,8 +17,11 @@ class StatisticsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Statistics'),
-        backgroundColor: const Color(0xFF6C63FF),
+        title:  Text('Statistics',style: TextStyle(color: Colors.white),),
+        backgroundColor: Color(0xFF6C63FF),
+        leading: IconButton(onPressed: (){
+          Get.back();
+        }, icon: Icon(Icons.arrow_back_ios,color: Colors.white,)),
         centerTitle: true,
         elevation: 2,
       ),

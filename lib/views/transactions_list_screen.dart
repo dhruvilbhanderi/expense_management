@@ -59,9 +59,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Transactions'),
-        backgroundColor: const Color(0xFF6C63FF),
+        title:  Text('Transactions',style: TextStyle(color: Colors.white),),
+        backgroundColor:  Color(0xFF6C63FF),
         elevation: 0,
+        leading: IconButton(onPressed: (){
+          Get.back();
+        }, icon: Icon(Icons.arrow_back_ios,color: Colors.white,)),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -86,8 +89,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.to(() => const AddTransactionScreen()),
         backgroundColor: const Color(0xFF6C63FF),
-        icon: const Icon(Icons.add),
-        label: const Text('Add'),
+        icon:  Icon(Icons.add,color: Colors.white,),
+        label:  Text('Add',style: TextStyle(color: Colors.white),),
       ),
     );
   }
@@ -213,6 +216,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
 
 
+  // Replace your existing _buildListArea() with this:
+
   Widget _buildListArea() {
     final all = controller.filteredTransactions;
 
@@ -240,7 +245,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       });
 
     // ensure the ListView has bottom space for keyboard / FAB
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom + 80.0;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom + 88.0;
 
     return RefreshIndicator(
       onRefresh: () async => controller.loadTransactions(),
@@ -289,42 +294,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 ),
               ),
 
-              // Items: use a Column of cards with spacing so layout stays stable
+              // Items: Dismissible + long-press enabled tiles
               Column(
                 children: items.map((tx) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Card(
-                      margin: EdgeInsets.zero,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        onTap: () => Get.to(() => AddTransactionScreen(transaction: tx)),
-                        leading: _buildLeadingAvatar(tx),
-                        title: Text(
-                          tx.title ?? 'Untitled',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: Text(
-                          '${tx.category ?? 'Others'} • ${DateFormat('MMM dd, yyyy').format(tx.date)}',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        trailing: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${tx.type == 'expense' ? '-' : '+'}${NumberFormat.currency(symbol: '\$').format(tx.amount)}',
-                              style: TextStyle(color: tx.type == 'expense' ? Colors.red : Colors.green, fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(DateFormat('hh:mm a').format(tx.date), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                    ),
+                    child: _buildDismissibleTileWithLongPress(tx),
                   );
                 }).toList(),
               ),
@@ -338,6 +313,156 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       ),
     );
   }
+
+// Add these helper methods inside the same State class:
+
+  /// Shows a confirm dialog; returns true if user confirmed deletion.
+  Future<bool> _showConfirmDeleteDialog(TransactionModel tx) async {
+    final res = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(colors: [Colors.red.shade400, Colors.red.shade700]),
+                  ),
+                  child: const Icon(Icons.delete_forever, color: Colors.white, size: 30),
+                ),
+                const SizedBox(height: 12),
+                const Text('Delete transaction?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(tx.title ?? 'Untitled', style: const TextStyle(color: Colors.grey)),
+                const SizedBox(height: 6),
+                Text('Amount: ${NumberFormat.currency(symbol: "₹").format(tx.amount)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return res == true;
+  }
+
+  /// Performs delete and shows UNDO snackbar (re-inserts tx if undone)
+  void _performDeleteWithUndo(TransactionModel tx) {
+    // take a copy for undo restore
+    final backup = tx;
+
+    // delete
+    controller.deleteTransaction(tx.id);
+
+    // show undo snack
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text('Deleted \"${tx.title ?? 'Transaction'}\"'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'UNDO',
+          textColor: Colors.yellowAccent,
+          onPressed: () {
+            // restore original transaction at top
+            controller.transactions.insert(0, backup);
+            controller.saveTransactions();
+            Get.snackbar('Restored', 'Transaction restored', snackPosition: SnackPosition.BOTTOM);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Dismissible tile that also supports long-press delete via same confirm dialog.
+  Widget _buildDismissibleTileWithLongPress(TransactionModel tx) {
+    final category = tx.category ?? 'Others';
+    final icon = tx.type == 'income'
+        ? controller.incomeCategoryIcons[category] ?? Icons.more_horiz
+        : controller.expenseCategoryIcons[category] ?? Icons.more_horiz;
+    final categoryColor = _categoryColor(category);
+
+    return Dismissible(
+      key: ValueKey(tx.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        height: 80,
+        margin: const EdgeInsets.symmetric(vertical: 0),
+        padding: const EdgeInsets.only(right: 18),
+        alignment: Alignment.centerRight,
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (_) async {
+        // show confirm dialog; if true, allow dismiss to proceed (onDismissed will run)
+        return await _showConfirmDeleteDialog(tx);
+      },
+      onDismissed: (_) {
+        // perform actual deletion and show undo snackbar
+        _performDeleteWithUndo(tx);
+      },
+      child: GestureDetector(
+        onLongPress: () async {
+          final confirm = await _showConfirmDeleteDialog(tx);
+          if (confirm) _performDeleteWithUndo(tx);
+        },
+        child: Card(
+          margin: EdgeInsets.zero,
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            onTap: () => Get.to(() => AddTransactionScreen(transaction: tx)),
+            leading: _buildLeadingAvatar(tx),
+            title: Text(tx.title ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text('${tx.category ?? 'Others'} • ${DateFormat('MMM dd, yyyy').format(tx.date)}', style: const TextStyle(fontSize: 13)),
+            trailing: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${tx.type == 'expense' ? '-' : '+'}${NumberFormat.currency(symbol: '₹').format(tx.amount)}',
+                  style: TextStyle(color: tx.type == 'expense' ? Colors.red : Colors.green, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(DateFormat('hh:mm a').format(tx.date), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
 
   List<TransactionModel> _applySearch(List<TransactionModel> list, String q) {
@@ -383,60 +508,6 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     return (net < 0 ? '-' : '') + formatted;
   }
 
-  Widget _buildDismissibleTile(TransactionModel tx) {
-    return Dismissible(
-      key: ValueKey(tx.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        height: 80,
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.only(right: 18),
-        alignment: Alignment.centerRight,
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      confirmDismiss: (_) async {
-        return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Delete transaction'),
-            content: const Text('Are you sure you want to delete this transaction?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Delete')),
-            ],
-          ),
-        );
-      },
-      onDismissed: (_) => _deleteWithUndo(tx),
-      child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ListTile(
-          onTap: () => Get.to(() => AddTransactionScreen(transaction: tx)),
-          leading: _buildLeadingAvatar(tx),
-          title: Text(tx.title ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text('${tx.category ?? 'Others'} • ${DateFormat('MMM dd, yyyy').format(tx.date)}', style: const TextStyle(fontSize: 13)),
-          trailing: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${tx.type == 'expense' ? '-' : '+'}${NumberFormat.currency(symbol: '\$').format(tx.amount)}',
-                style: TextStyle(color: tx.type == 'expense' ? Colors.red : Colors.green, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 6),
-              Text(DateFormat('hh:mm a').format(tx.date), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildLeadingAvatar(TransactionModel tx) {
     final cat = tx.category ?? 'Others';
@@ -476,27 +547,4 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     return map[category] ?? Colors.grey;
   }
 
-  void _deleteWithUndo(TransactionModel tx) {
-    // Remove immediately
-    controller.deleteTransaction(tx.id);
-
-    // Show snackbar with undo
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Transaction deleted'),
-        action: SnackBarAction(
-          label: 'UNDO',
-          onPressed: () {
-            // Re-insert transaction to the top
-            controller.transactions.insert(0, tx);
-            controller.saveTransactions();
-            // small confirmation
-            Get.snackbar('Restored', 'Transaction restored', snackPosition: SnackPosition.BOTTOM);
-          },
-        ),
-        duration: const Duration(seconds: 5),
-      ),
-    );
-  }
 }
