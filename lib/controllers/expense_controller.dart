@@ -6,7 +6,6 @@ import '../models/transaction_model.dart';
 
 class ExpenseController extends GetxController {
   var transactions = <TransactionModel>[].obs;
-  var selectedFilter = 'All'.obs;
   var selectedMonth = DateTime.now().obs;
 
   final Map<String, IconData> expenseCategoryIcons = {
@@ -63,12 +62,20 @@ class ExpenseController extends GetxController {
 
   double get balance => totalIncome - totalExpense;
 
-  List<TransactionModel> get filteredTransactions {
+  // Get filtered transactions based on a filter parameter
+  List<TransactionModel> getFilteredTransactions(String filter) {
     var filtered = transactions.where((t) {
-      if (selectedFilter.value == 'All') return true;
-      return t.type == selectedFilter.value.toLowerCase();
+      if (filter == 'All') return true;
+      return t.type == filter.toLowerCase();
     }).toList();
 
+    filtered.sort((a, b) => b.date.compareTo(a.date));
+    return filtered;
+  }
+
+  // Keep backward compatibility - returns all transactions sorted
+  List<TransactionModel> get filteredTransactions {
+    var filtered = transactions.toList();
     filtered.sort((a, b) => b.date.compareTo(a.date));
     return filtered;
   }
@@ -134,6 +141,23 @@ class ExpenseController extends GetxController {
   Map<String, double> getCategoryExpenses() {
     Map<String, double> categoryData = {};
     for (var transaction in transactions.where((t) => t.type == 'expense')) {
+      categoryData[transaction.category] =
+          (categoryData[transaction.category] ?? 0) + transaction.amount;
+    }
+    return categoryData;
+  }
+
+  // Get category data for a specific type (expense or income)
+  Map<String, double> getCategoryData(String filter) {
+    Map<String, double> categoryData = {};
+    String type = filter.toLowerCase();
+    
+    if (filter == 'All') {
+      // For 'All', we'll show expenses by default (can be changed later)
+      type = 'expense';
+    }
+    
+    for (var transaction in transactions.where((t) => t.type == type)) {
       categoryData[transaction.category] =
           (categoryData[transaction.category] ?? 0) + transaction.amount;
     }

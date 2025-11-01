@@ -29,6 +29,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   String _searchQuery = '';
+  
+  // Local filter state for transactions list - independent from dashboard
+  var _transactionsListFilter = 'All'.obs;
 
   @override
   void initState() {
@@ -57,25 +60,49 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title:  Text('Transactions',style: TextStyle(color: Colors.white),),
-        backgroundColor:  Color(0xFF6C63FF),
         elevation: 0,
-        leading: IconButton(onPressed: (){
-          Get.back();
-        }, icon: Icon(Icons.arrow_back_ios,color: Colors.white,)),
+        backgroundColor: Colors.transparent,
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            color: const Color(0xFF6C63FF),
+            onPressed: () => Get.back(),
+          ),
+        ),
+        title: const Text(
+          'Transactions',
+          style: TextStyle(
+            color: Color(0xFF1A1A1A),
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
         centerTitle: true,
       ),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 children: [
                   _buildSearchField(theme),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   _buildFilterSegment(),
                 ],
               ),
@@ -89,31 +116,53 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.to(() => const AddTransactionScreen()),
         backgroundColor: const Color(0xFF6C63FF),
-        icon:  Icon(Icons.add,color: Colors.white,),
-        label:  Text('Add',style: TextStyle(color: Colors.white),),
+        elevation: 8,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Add Transaction',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
   Widget _buildSearchField(ThemeData theme) {
-    return Material(
-      elevation: 2,
-      borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: TextField(
         controller: _searchController,
+        style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
           hintText: 'Search title, category or amount',
-          prefixIcon: const Icon(Icons.search),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF6C63FF)),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-            icon: const Icon(Icons.clear),
+            icon: const Icon(Icons.clear, color: Colors.grey),
             onPressed: () {
               _searchController.clear();
               setState(() => _searchQuery = '');
             },
           )
               : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
     );
@@ -121,7 +170,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   Widget _buildFilterSegment() {
     return Obx(() {
-      final selected = controller.selectedFilter.value;
+      final selected = _transactionsListFilter.value;
 
       // Take around 65% of screen width for a balanced look
       final double totalWidth = MediaQuery.of(context).size.width * 0.65;
@@ -183,7 +232,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
             selected: {selected},
             onSelectionChanged: (Set<String> newSelection) {
               if (newSelection.isNotEmpty) {
-                controller.selectedFilter.value = newSelection.first;
+                _transactionsListFilter.value = newSelection.first;
               }
             },
             style: ButtonStyle(
@@ -219,7 +268,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   // Replace your existing _buildListArea() with this:
 
   Widget _buildListArea() {
-    final all = controller.filteredTransactions;
+    final all = controller.getFilteredTransactions(_transactionsListFilter.value);
 
     // Apply search locally (title, category, amount)
     final filtered = _applySearch(all, _searchQuery);
@@ -268,25 +317,42 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      month,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        month,
+                        style: const TextStyle(
+                          color: Color(0xFF6C63FF),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _computeMonthNet(items) < 0 ? Colors.red.withOpacity(0.08) : Colors.green.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(20),
+                        color: _computeMonthNet(items) < 0
+                            ? const Color(0xFFFF4757).withOpacity(0.1)
+                            : const Color(0xFF2ECC71).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _computeMonthNet(items) < 0
+                              ? const Color(0xFFFF4757).withOpacity(0.3)
+                              : const Color(0xFF2ECC71).withOpacity(0.3),
+                        ),
                       ),
                       child: Text(
                         _formatCurrency(items),
                         style: TextStyle(
-                          color: _computeMonthNet(items) < 0 ? Colors.red : Colors.green,
-                          fontWeight: FontWeight.w700,
+                          color: _computeMonthNet(items) < 0
+                              ? const Color(0xFFFF4757)
+                              : const Color(0xFF2ECC71),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
                     ),
@@ -436,25 +502,91 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           final confirm = await _showConfirmDeleteDialog(tx);
           if (confirm) _performDeleteWithUndo(tx);
         },
-        child: Card(
+        child: Container(
           margin: EdgeInsets.zero,
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
           child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             onTap: () => Get.to(() => AddTransactionScreen(transaction: tx)),
             leading: _buildLeadingAvatar(tx),
-            title: Text(tx.title ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text('${tx.category ?? 'Others'} • ${DateFormat('MMM dd, yyyy').format(tx.date)}', style: const TextStyle(fontSize: 13)),
+            title: Text(
+              tx.title ?? 'Untitled',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Color(0xFF1A1A1A),
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.category, size: 12, color: Colors.grey.shade600),
+                      SizedBox(width: 4),
+                      Text(
+                        '${tx.category ?? 'Others'}',
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      ),
+                      SizedBox(width: 8),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade600),
+                      SizedBox(width: 4),
+                      Text(
+                        DateFormat('dd MMM yyyy').format(tx.date),
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${tx.type == 'expense' ? '-' : '+'}${NumberFormat.currency(symbol: '₹').format(tx.amount)}',
-                  style: TextStyle(color: tx.type == 'expense' ? Colors.red : Colors.green, fontWeight: FontWeight.w800),
+                  '${tx.type == 'expense' ? '-' : '+'}₹${tx.amount.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: tx.type == 'expense' ? const Color(0xFFFF4757) : const Color(0xFF2ECC71),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-                const SizedBox(height: 6),
-                Text(DateFormat('hh:mm a').format(tx.date), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (tx.type == 'expense' ? const Color(0xFFFF4757) : const Color(0xFF2ECC71))
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    tx.type == 'expense' ? 'Expense' : 'Income',
+                    style: TextStyle(
+                      color: tx.type == 'expense' ? const Color(0xFFFF4757) : const Color(0xFF2ECC71),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -504,8 +636,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   String _formatCurrency(List<TransactionModel> items) {
     final net = _computeMonthNet(items);
-    final formatted = NumberFormat.currency(symbol: '\$').format(net.abs());
-    return (net < 0 ? '-' : '') + formatted;
+    final formatted = NumberFormat.currency(symbol: '₹').format(net.abs());
+    return (net < 0 ? '-' : '+') + formatted;
   }
 
 
@@ -518,13 +650,24 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
         : controller.expenseCategoryIcons[cat] ?? Icons.more_horiz;
 
     return Container(
-      width: 44,
-      height: 44,
+      width: 52,
+      height: 52,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color.withOpacity(0.15), color.withOpacity(0.05)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(10),
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Icon(icon, color: color, size: 24),
     );
   }
 
