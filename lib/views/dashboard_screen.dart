@@ -1,12 +1,13 @@
 import 'package:expense_management/models/transaction_model.dart';
+import 'package:expense_management/views/add_transaction_screen.dart';
+import 'package:expense_management/views/statistics_screen.dart';
+import 'package:expense_management/views/transactions_list_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/expense_controller.dart';
-import 'add_transaction_screen.dart';
-import 'transactions_list_screen.dart';
-import 'statistics_screen.dart';
+
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -44,8 +45,8 @@ class DashboardScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Statistics',
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () => Get.to(() => const StatisticsScreen()),
+            icon:  Icon(Icons.bar_chart),
+            onPressed: () => Get.to(() =>  StatisticsScreen()),
           ),
           // IconButton(
           //   tooltip: 'Refresh',
@@ -79,7 +80,7 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Get.to(() => const AddTransactionScreen()),
+        onPressed: () => Get.to(() =>  AddTransactionScreen()),
         backgroundColor: primaryColor,
         icon: const Icon(Icons.add),
         label: const Text('Add'),
@@ -259,7 +260,7 @@ class DashboardScreen extends StatelessWidget {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         TextButton(
-          onPressed: () => Get.to(() => const TransactionsListScreen()),
+          onPressed: () => Get.to(() =>  TransactionsListScreen()),
           child: const Text('See All'),
         ),
       ],
