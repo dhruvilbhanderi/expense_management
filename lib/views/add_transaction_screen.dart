@@ -79,38 +79,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         leading: IconButton(onPressed: (){
           Get.back();
         }, icon: Icon(Icons.arrow_back_ios,color: Colors.white,)),
-        actions: widget.transaction != null
-            ? [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              Get.dialog(
-                AlertDialog(
-                  title: const Text('Delete Transaction'),
-                  content: const Text(
-                      'Are you sure you want to delete this transaction?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Get.back(),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        controller
-                            .deleteTransaction(widget.transaction!.id);
-                        Get.back();
-                        Get.back();
-                      },
-                      child:  Text('Delete',
-                          style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ]
-            : null,
       ),
       body: Form(
         key: _formKey,
